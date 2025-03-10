@@ -1,0 +1,9 @@
+training:
+  epochs: 10
+  batch_size: 32
+  learning_rate: 0.001
+  momentum: 0.9
+
+optimizer:
+  name: "SGD"
+  weight_decay: 1e-4
