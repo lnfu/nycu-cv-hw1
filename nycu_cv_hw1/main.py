@@ -55,8 +55,14 @@ for param in backbone.parameters():
 model = Model(backbone, train_num_classes).to(device)
 optimizer = torch.optim.Adam(model.parameters())
 for epoch in range(config.num_epoch):
-    model.train()  # 轉成 training mode
 
+    train_loss = 0.0
+    val_loss = 0.0
+
+    train_acc = 0.0
+    val_acc = 0.0
+
+    model.train()  # 轉成 training mode
     for inputs, labels in tqdm(
         train_loader, desc=f"Epoch {epoch + 1}/{config.num_epoch}", ncols=100
     ):
@@ -65,12 +71,14 @@ for epoch in range(config.num_epoch):
 
         outputs = model(inputs)
 
-        loss_criterion = torch.nn.CrossEntropyLoss()  # TODO
+        loss_criterion = torch.nn.CrossEntropyLoss(reduction="mean")  # TODO
         loss = loss_criterion(outputs, labels)
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        train_loss += loss.item() * inputs.size(0)
 
     with torch.no_grad():
         model.eval()
@@ -82,11 +90,12 @@ for epoch in range(config.num_epoch):
 
             outputs = model(inputs)
 
-            loss_criterion = torch.nn.CrossEntropyLoss()
+            loss_criterion = torch.nn.CrossEntropyLoss(reduction="mean")
             loss = loss_criterion(outputs, labels)
 
+            val_loss += loss.item() * inputs.size(0)
 
-exit(0)
+    logging.info(f"Train loss: {train_loss}, Validation loss: {val_loss}")
 
 
 # print(sum(p.numel() for p in backbone.parameters()))

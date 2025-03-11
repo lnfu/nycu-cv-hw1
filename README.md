@@ -27,6 +27,7 @@ Image classification
 
 ```
 ├── data/              # Dataset used for training/testing (if applicable)
+├── config.yaml        # Configuration for training
 ├── README.md          # This file
 └── requirements.txt   # Required dependencies
 ```
