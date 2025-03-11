@@ -1,14 +1,18 @@
-import torch
-from PIL import Image
-from torchvision import models, transforms, datasets
-from torch.utils import data
 import logging
 import pathlib
-from nycu_cv_hw1.model import Model
-from nycu_cv_hw1.config import Config
-from tqdm import tqdm  
 
-data_dir_path = pathlib.Path("data")  # TODO
+import torch
+from PIL import Image
+from torch.utils import data
+from torchvision import datasets, models, transforms
+from tqdm import tqdm
+
+from nycu_cv_hw1.config import Config
+from nycu_cv_hw1.model import Model
+
+DATA_DIR_PATH = pathlib.Path("data")
+config = Config("config.yaml")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
@@ -28,22 +32,34 @@ transform = transforms.Compose(
 
 device = torch.torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logging.info(f"device: {device}")
-train_dataset = datasets.ImageFolder(root=data_dir_path / "train", transform=transform)
-num_classes = len(train_dataset.class_to_idx)
+
+train_dataset = datasets.ImageFolder(root=DATA_DIR_PATH / "train", transform=transform)
+train_num_classes = len(train_dataset.class_to_idx)
 train_loader = data.DataLoader(
-    train_dataset, batch_size=32, shuffle=True, num_workers=1
+    train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=1
 )
-backbone = models.resnet101(pretrained=True, progress=True)
+
+val_dataset = datasets.ImageFolder(root=DATA_DIR_PATH / "val", transform=transform)
+val_num_classes = len(val_dataset.class_to_idx)
+val_loader = data.DataLoader(
+    val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=1
+)
+
+if train_num_classes != val_num_classes:
+    raise Exception()  # TODO
+
+backbone = models.resnet101(weights=models.ResNet101_Weights.DEFAULT, progress=True)
 for param in backbone.parameters():
     param.requires_grad = False
 
-model = Model(backbone, num_classes).to(device)
+model = Model(backbone, train_num_classes).to(device)
 optimizer = torch.optim.Adam(model.parameters())
-config = Config("config.yaml")
-for epoch in range(config.epochs):
+for epoch in range(config.num_epoch):
     model.train()  # 轉成 training mode
 
-    for inputs, labels in tqdm(train_loader, desc=f"Epoch {epoch + 1}/{config.epochs}", ncols=100):
+    for inputs, labels in tqdm(
+        train_loader, desc=f"Epoch {epoch + 1}/{config.num_epoch}", ncols=100
+    ):
         inputs = inputs.to(device)  # TODO type hint
         labels = labels.to(device)  # TODO type hint
 
@@ -56,11 +72,22 @@ for epoch in range(config.epochs):
         loss.backward()
         optimizer.step()
 
+    with torch.no_grad():
+        model.eval()
+        for inputs, labels in tqdm(
+            val_loader, desc=f"Epoch {epoch + 1}/{config.num_epoch}", ncols=100
+        ):
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            outputs = model(inputs)
+
+            loss_criterion = torch.nn.CrossEntropyLoss()
+            loss = loss_criterion(outputs, labels)
+
 
 exit(0)
 
-# val_dataset = datasets.ImageFolder(root=data_dir_path / "val", transform=transform)
-# val_loader = data.DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 
 # print(sum(p.numel() for p in backbone.parameters()))
 

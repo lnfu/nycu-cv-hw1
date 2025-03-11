@@ -1,5 +1,6 @@
-import yaml
 import pathlib
+
+import yaml
 
 
 class Config:
@@ -24,5 +25,9 @@ class Config:
                 raise ValueError(f"Error parsing YAML file: {exc}")
 
     @property
-    def epochs(self):
+    def num_epoch(self):
         return self._config["training"]["epochs"]
+
+    @property
+    def batch_size(self):
+        return self._config["training"]["batch_size"]
