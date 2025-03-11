@@ -1,9 +1,9 @@
 training:
   epochs: 10
   batch_size: 32
-  learning_rate: 0.001
-  momentum: 0.9
+  learning_rate: 0.001 # TODO
+  momentum: 0.9 # TODO
 
 optimizer:
-  name: "SGD"
-  weight_decay: 1e-4
+  name: "SGD" # TODO
+  weight_decay: 1e-4 # TODO

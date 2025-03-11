@@ -1,8 +1,8 @@
 import logging
 import pathlib
+import typing
 
 import yaml
-import typing
 
 logging.basicConfig(
     level=logging.INFO,

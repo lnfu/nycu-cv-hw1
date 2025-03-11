@@ -1,18 +1,15 @@
 import logging
 import pathlib
+import typing
 
 import torch
 import torch.utils.tensorboard as tensorboard
 import torchvision
 import tqdm
-
-import typing
+from PIL import Image, ImageFile
 
 from nycu_cv_hw1.config import Config
 from nycu_cv_hw1.model import Model
-
-from PIL import Image, ImageFile
-
 
 DATA_DIR_PATH = pathlib.Path("data")
 

@@ -1,3 +1,4 @@
+import datetime
 import logging
 import pathlib
 
@@ -9,10 +10,9 @@ import tqdm
 from nycu_cv_hw1.config import Config
 from nycu_cv_hw1.model import Model
 
-# from PIL import Image
-
-
 DATA_DIR_PATH = pathlib.Path("data")
+LOG_DIR_PATH = pathlib.Path("logs")
+MODEL_DIR_PATH = pathlib.Path("models")
 
 config = Config("config.yaml")
 
@@ -51,7 +51,7 @@ def main():
 
     model = Model(backbone, num_classes).to(device)
 
-    writer = tensorboard.writer.SummaryWriter(log_dir="logs")
+    writer = tensorboard.writer.SummaryWriter(log_dir=LOG_DIR_PATH)
     optimizer = torch.optim.Adam(model.parameters())
     for epoch in range(config.num_epoch):
 
@@ -104,6 +104,10 @@ def main():
         writer.add_scalar("Accuracy/Validation", val_acc, epoch + 1)
 
     writer.close()
+
+    current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    torch.save(model, MODEL_DIR_PATH / f"{current_time}.pt")
+    # torch.save(model.state_dict(), 'model.pt') # only save weights
 
 
 if __name__ == "__main__":
