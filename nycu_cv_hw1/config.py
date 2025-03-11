@@ -1,15 +1,27 @@
+import logging
 import pathlib
 
 import yaml
+import typing
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    filename="basic.log",
+)
 
 
 class Config:
     _config: dict
 
-    def __init__(self, config_file_path: pathlib.Path | str):
+    def __init__(
+        self,
+        config_file_path: typing.Union[str, pathlib.Path],
+    ):
         if isinstance(config_file_path, str):
             config_file_path = pathlib.Path(config_file_path)
-            
+
         # TODO 如果不是 pathlib.Path raise Exception
 
         if not config_file_path.exists():
