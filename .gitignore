@@ -1,6 +1,8 @@
 data
 logs
 models
+prediction.csv
+prediction.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
