@@ -1,5 +1,9 @@
 # NYCU CV 2025 Spring - Homework 1
 
+[![python](https://img.shields.io/badge/Python-3.12-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
+[![pytorch](https://img.shields.io/badge/PyTorch-2.6.0-EE4C2C.svg?style=flat&logo=pytorch)](https://pytorch.org)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 ## Student Information
 - **Student ID**: 110550020  
 - **Name**: Enfu Liao (廖恩莆)  
