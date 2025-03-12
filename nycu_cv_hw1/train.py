@@ -13,12 +13,29 @@ from nycu_cv_hw1.model import Model
 DATA_DIR_PATH = pathlib.Path("data")
 LOG_DIR_PATH = pathlib.Path("logs")
 MODEL_DIR_PATH = pathlib.Path("models")
+MODEL_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
 config = Config("config.yaml")
 
 
 def get_data_loaders():
-    tf = torchvision.models.ResNet101_Weights.DEFAULT.transforms()
+    # tf = torchvision.models.ResNet101_Weights.DEFAULT.transforms()
+    # ref: https://pytorch.org/vision/stable/models/generated/torchvision.models.resnet101.html
+    tf = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.RandomHorizontalFlip(p=0.5),
+            torchvision.transforms.RandomVerticalFlip(p=0.5),
+            torchvision.transforms.Resize(
+                232, interpolation=torchvision.transforms.InterpolationMode.BILINEAR
+            ),
+            torchvision.transforms.CenterCrop(224),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),
+        ]
+    )
+
     train_dataset = torchvision.datasets.ImageFolder(
         root=DATA_DIR_PATH / "train", transform=tf
     )
@@ -43,16 +60,17 @@ def main():
 
     train_loader, val_loader, num_classes = get_data_loaders()
 
+    # Model
     backbone = torchvision.models.resnet101(
         weights=torchvision.models.ResNet101_Weights.DEFAULT, progress=True
     )
-    for param in backbone.parameters():
-        param.requires_grad = False
-
     model = Model(backbone, num_classes).to(device)
 
+    # Training
     writer = tensorboard.writer.SummaryWriter(log_dir=LOG_DIR_PATH)
-    optimizer = torch.optim.Adam(model.parameters())
+    optimizer = torch.optim.Adam(
+        params=model.parameters(), lr=config.lr, weight_decay=config.weight_decay
+    )
     for epoch in range(config.num_epoch):
 
         train_loss = 0.0

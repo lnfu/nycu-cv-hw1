@@ -38,8 +38,16 @@ class Config:
 
     @property
     def num_epoch(self):
-        return self._config["training"]["epochs"]
+        return int(self._config["training"]["epochs"])
 
     @property
     def batch_size(self):
-        return self._config["training"]["batch_size"]
+        return int(self._config["training"]["batch_size"])
+
+    @property
+    def lr(self):
+        return float(self._config["training"]["learning_rate"])
+
+    @property
+    def weight_decay(self):
+        return float(self._config["optimizer"]["weight_decay"])
