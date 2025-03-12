@@ -1,9 +1,14 @@
 training:
-  epochs: 10
-  batch_size: 32
+  epochs: 30
+  batch_size: 64
   learning_rate: 1e-3
   momentum: 0.9 # TODO
 
+model:
+  backbone: "resnet34"
+  pretrained: true
+  num_classes: 100 # TODO
+
 optimizer:
   name: "Adam" # TODO
-  weight_decay: 1e-4 # TODO
+  weight_decay: 1e-4

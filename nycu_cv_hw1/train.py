@@ -61,10 +61,7 @@ def main():
     train_loader, val_loader, num_classes = get_data_loaders()
 
     # Model
-    backbone = torchvision.models.resnet101(
-        weights=torchvision.models.ResNet101_Weights.DEFAULT, progress=True
-    )
-    model = Model(backbone, num_classes).to(device)
+    model = Model(config.backbone_model, num_classes).to(device)
 
     # Training
     writer = tensorboard.writer.SummaryWriter(log_dir=LOG_DIR_PATH)

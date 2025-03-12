@@ -21,7 +21,7 @@ Image classification
    ```
 2. Install dependencies:
    ```sh
-   pip install -r requirements.txt
+   pip install -r requirements.txt --index-url https://download.pytorch.org/whl/cu126 --extra-index-url https://pypi.org/simple --break-system-packages
    ```
 3. Run the main script:
    ```sh

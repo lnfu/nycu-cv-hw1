@@ -1,8 +1,9 @@
 import logging
 import pathlib
 import typing
-
+import torchvision
 import yaml
+import torch
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,17 +38,44 @@ class Config:
                 raise ValueError(f"Error parsing YAML file: {exc}")
 
     @property
-    def num_epoch(self):
+    def num_epoch(self) -> int:
         return int(self._config["training"]["epochs"])
 
     @property
-    def batch_size(self):
+    def batch_size(self) -> int:
         return int(self._config["training"]["batch_size"])
 
     @property
-    def lr(self):
+    def lr(self) -> float:
         return float(self._config["training"]["learning_rate"])
 
     @property
-    def weight_decay(self):
+    def weight_decay(self) -> float:
         return float(self._config["optimizer"]["weight_decay"])
+
+    @property
+    def backbone_model(self) -> torch.nn.Module:
+        backbone = str(self._config["model"]["backbone"]).lower()
+        pretrained = bool(self._config["model"]["pretrained"])
+
+        model_map = {
+            "resnet18": torchvision.models.resnet18,
+            "resnet34": torchvision.models.resnet34,
+            "resnet50": torchvision.models.resnet50,
+            "resnet101": torchvision.models.resnet101,
+        }
+
+        if backbone not in model_map:
+            raise ValueError()
+
+        weights = None
+        if pretrained:
+            weights_map = {
+                "resnet18": torchvision.models.ResNet18_Weights.DEFAULT,
+                "resnet34": torchvision.models.ResNet34_Weights.DEFAULT,
+                "resnet50": torchvision.models.ResNet50_Weights.DEFAULT,
+                "resnet101": torchvision.models.ResNet101_Weights.DEFAULT,
+            }
+            weights = weights_map.get(backbone)
+
+        return model_map[backbone](weights=weights, progress=True)

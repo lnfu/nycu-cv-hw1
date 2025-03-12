@@ -54,7 +54,7 @@ def main():
     backbone = torchvision.models.resnet101(
         weights=torchvision.models.ResNet101_Weights.DEFAULT, progress=True
     )
-    model = torch.load("models/20250311_093933.pt", weights_only=False)
+    model = torch.load("models/20250312_064812.pt", weights_only=False)
     model.eval()
 
     transform = torchvision.models.ResNet101_Weights.DEFAULT.transforms()
