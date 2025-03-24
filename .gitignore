@@ -3,6 +3,7 @@ logs
 models
 prediction.csv
 prediction.zip
+hw1-data.tar.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
