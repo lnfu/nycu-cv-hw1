@@ -40,7 +40,7 @@ class TestDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx) -> typing.Tuple[ImageFile.ImageFile, str]:
         img_path = self.image_file_paths[idx]
-        image = Image.open(img_path)
+        image = Image.open(img_path).convert("RGB")
         if self.transform:
             image = self.transform(image)
         return image, img_path.stem
@@ -73,7 +73,7 @@ def main():
 
     test_dataset = TestDataset(image_dir_path=DATA_DIR_PATH / "test", transform=tf)
     test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=config.batch_size, shuffle=False, num_workers=1
+        test_dataset, batch_size=config.batch_size, shuffle=False
     )
 
     print("image_name,pred_label")

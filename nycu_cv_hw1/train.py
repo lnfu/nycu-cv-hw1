@@ -19,25 +19,19 @@ MODEL_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
 config = Config("config.yaml")
 
+tf = transforms.Compose(
+    [
+        transforms.RandomRotation(10),
+        transforms.RandomHorizontalFlip(),
+        transforms.ColorJitter(contrast=0.2, saturation=0.2, brightness=0.2, hue=0.2),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),  # Convert image to PyTorch tensor
+    ]
+)
+
 
 def get_data_loaders():
-
-    tf = transforms.Compose(
-        [
-            transforms.RandomRotation(10),  # Random rotation between -10 and 10 degrees
-            transforms.RandomResizedCrop(
-                224
-            ),  # Randomly crop and resize to 224x224 (adjust if needed)
-            transforms.RandomHorizontalFlip(),  # Random horizontal flip
-            transforms.ColorJitter(
-                contrast=0.2, saturation=0.2, brightness=0.2, hue=0.2
-            ),  # Simulate color jitter (like zoom)
-            transforms.RandomAffine(
-                degrees=0, translate=(0.1, 0.1)
-            ),  # Random translation (width_shift and height_shift)
-            transforms.ToTensor(),  # Convert image to PyTorch tensor
-        ]
-    )
 
     all_dataset = torchvision.datasets.ImageFolder(
         root=DATA_DIR_PATH / "all",
@@ -75,7 +69,7 @@ def train(
     cw,  # class_weight TODO
 ):
 
-    loss_criterion = torch.nn.CrossEntropyLoss(
+    loss_fn = torch.nn.CrossEntropyLoss(
         label_smoothing=0.1,
         weight=cw.to(device),
         # reduction="mean" # TODO
@@ -91,15 +85,16 @@ def train(
         for inputs, labels in tqdm.tqdm(
             train_loader, desc=f"Epoch {epoch + 1}/{config.num_epoch}", ncols=100
         ):
+            optimizer.zero_grad()
+
             inputs = inputs.to(device)  # TODO type hint
             labels = labels.to(device)  # TODO type hint torch.Size([32])
 
             outputs = model(inputs)  # torch.Size([32, 100]) 機率
             preds = torch.argmax(outputs, dim=1)
 
-            loss = loss_criterion(outputs, labels)
+            loss = loss_fn(outputs, labels)
 
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
@@ -120,7 +115,7 @@ def train(
                 outputs = model(inputs)
                 preds = torch.argmax(outputs, dim=1)
 
-                loss = loss_criterion(outputs, labels)
+                loss = loss_fn(outputs, labels)
 
                 val_loss += loss.item()  # * inputs.size(0)
                 val_correct += (preds == labels).sum().item()
@@ -163,9 +158,11 @@ def main():
 
     optimizer = config.get_optimizer(model.parameters())
 
-    scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=7, gamma=0.1
-    )  # TODO config
+    # scheduler = torch.optim.lr_scheduler.StepLR(
+    #     optimizer, step_size=7, gamma=0.1
+    # )  # TODO config
+
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.5)
 
     try:
         train(device, model, optimizer, scheduler, train_loader, val_loader, writer, cw)
@@ -175,7 +172,7 @@ def main():
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"epoch_{config.num_epoch}_lr_{config.lr}_batch_{config.batch_size}_{current_time}.pt"
 
-        torch.save(model.state_dict(), MODEL_DIR_PATH / filename)
+        torch.save(model, MODEL_DIR_PATH / filename)
         logging.info(f"Model saved as {filename}")
         print(filename)
         writer.close()

@@ -22,7 +22,8 @@ class Model(torch.nn.Module):
         self.backbone.fc = torch.nn.Linear(fc_in_features, num_classes)
         num_params = sum(p.numel() for p in self.backbone.parameters())
         logging.info(f"# of parameters = {humanize.intword(num_params)}")
-        
+        assert num_params <= 1e8
+
         # torch.nn.init.xavier_uniform_(self.backbone.fc.weight)
 
         # self.backbone.fc = torch.nn.Sequential(
