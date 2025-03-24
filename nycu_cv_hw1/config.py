@@ -29,12 +29,9 @@ class Config:
         if not config_file_path.exists():
             raise FileNotFoundError()
 
-        if config_file_path.suffix not in {".yaml", ".yml"}:
-            raise ValueError()
-
         with open(config_file_path, "r") as config_file:
             try:
-                return yaml.safe_load(config_file)
+                self._config = yaml.safe_load(config_file)
             except yaml.YAMLError as exc:
                 logging.error(f"Failed to parse YAML file '{config_file_path}': {exc}")
                 raise ValueError()
@@ -70,29 +67,29 @@ class Config:
         """
         optimizer, 預設 Adam
         """
-        optimizer_type = self.optimizer_type
-        lr = self.lr
-        weight_decay = self.weight_decay
-        momentum = float(self._config.get("optimizer", {}).get("momentum", 0.9))
-        epsilon = float(self._config.get("optimizer", {}).get("epsilon", 1e-8))
-
-        optimizers = {
-            "adam": torch.optim.Adam,
-            "sgd": torch.optim.SGD,
-            "rmsprop": torch.optim.RMSprop,
-        }
-
-        optimizer_class = optimizers.get(optimizer_type)
-        if not optimizer_class:
-            raise ValueError(f"Unexpected optimizer '{optimizer_type}'")
-
-        return optimizer_class(
-            model_params,
-            lr=lr,
-            weight_decay=weight_decay,
-            momentum=momentum,
-            eps=epsilon,
-        )
+        if self._optimizer_type == "adam":
+            return torch.optim.Adam(
+                model_params,
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+                eps=float(self._config.get("optimizer", {}).get("epsilon", 1e-8)),
+            )
+        elif self._optimizer_type == "sgd":
+            return torch.optim.SGD(
+                model_params,
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+                momentum=float(self._config.get("optimizer", {}).get("momentum", 0.9)),
+            )
+        elif self._optimizer_type == "rmsprop":
+            return torch.optim.RMSprop(
+                model_params,
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+                momentum=float(self._config.get("optimizer", {}).get("momentum", 0.9)),
+            )
+        else:
+            raise ValueError()
 
     @property
     def inference_model(self) -> str:
