@@ -29,54 +29,46 @@ class Config:
         if not config_file_path.exists():
             raise FileNotFoundError()
 
-        if config_file_path.suffix != ".yaml" and config_file_path.suffix != ".yml":
+        if config_file_path.suffix not in {".yaml", ".yml"}:
             raise ValueError()
 
         with open(config_file_path, "r") as config_file:
             try:
-                self._config = yaml.safe_load(config_file)
+                return yaml.safe_load(config_file)
             except yaml.YAMLError as exc:
                 logging.error(f"Failed to parse YAML file '{config_file_path}': {exc}")
-                raise ValueError(f"Error parsing YAML file: {exc}")
+                raise ValueError()
 
     @property
     def num_epoch(self) -> int:
-        """返回訓練的 epoch 次數"""
-        return int(self._config.get("training", {}).get("epochs", 100))  # 預設值 100
+        """訓練次數, 預設值 100"""
+        return int(self._config.get("training", {}).get("epochs", 100))
 
     @property
     def batch_size(self) -> int:
-        """返回訓練的 batch size"""
+        """batch size, 預設值 32"""
         return int(self._config.get("training", {}).get("batch_size", 32))
 
     @property
     def lr(self) -> float:
-        """返回學習率"""
+        """learning rate, 預設值 1e-3"""
         return float(self._config.get("optimizer", {}).get("learning_rate", 1e-3))
 
     @property
     def weight_decay(self) -> float:
-        """返回權重衰減"""
+        """weight decay, 預設值 0.0"""
         return float(self._config.get("optimizer", {}).get("weight_decay", 0.0))
 
     @property
-    def optimizer_type(self) -> str:
-        """
-        返回優化器類型，並檢查其是否支持
-        :raises ValueError: 若優化器類型無效
-        """
+    def _optimizer_type(self) -> str:
         optimizer = str(self._config.get("optimizer", {}).get("type", "adam")).lower()
         if optimizer not in {"adam", "sgd", "rmsprop"}:
-            raise ValueError(
-                f"Unsupported optimizer '{optimizer}'. Must be one of: adam, sgd, rmsprop"
-            )
+            raise ValueError()
         return optimizer
 
     def get_optimizer(self, model_params) -> torch.optim.Optimizer:
         """
-        根據 YAML 設定返回對應的 Optimizer
-        :param model_params: 模型的參數
-        :return: 相應的優化器實例
+        optimizer, 預設 Adam
         """
         optimizer_type = self.optimizer_type
         lr = self.lr
@@ -84,31 +76,48 @@ class Config:
         momentum = float(self._config.get("optimizer", {}).get("momentum", 0.9))
         epsilon = float(self._config.get("optimizer", {}).get("epsilon", 1e-8))
 
-        # 選擇對應的優化器
-        if optimizer_type == "adam":
-            return torch.optim.Adam(
-                model_params, lr=lr, weight_decay=weight_decay, eps=epsilon
-            )
-        elif optimizer_type == "sgd":
-            return torch.optim.SGD(
-                model_params, lr=lr, weight_decay=weight_decay, momentum=momentum
-            )
-        elif optimizer_type == "rmsprop":
-            return torch.optim.RMSprop(
-                model_params, lr=lr, weight_decay=weight_decay, momentum=momentum
-            )
-        else:
+        optimizers = {
+            "adam": torch.optim.Adam,
+            "sgd": torch.optim.SGD,
+            "rmsprop": torch.optim.RMSprop,
+        }
+
+        optimizer_class = optimizers.get(optimizer_type)
+        if not optimizer_class:
             raise ValueError(f"Unexpected optimizer '{optimizer_type}'")
 
+        return optimizer_class(
+            model_params,
+            lr=lr,
+            weight_decay=weight_decay,
+            momentum=momentum,
+            eps=epsilon,
+        )
+
     @property
-    def inference_model(self):
+    def inference_model(self) -> str:
         return str(self._config["model"]["inference"])
+
+    @property
+    def label_smoothing(self) -> float:
+        return float(self._config["loss"].get("label_smoothing", 0.0))
+
+    @property
+    def use_class_weight(self) -> bool:
+        return bool(self._config["loss"].get("class_weight", False))
+
+    @property
+    def scheduler_step_size(self) -> int:
+        return int(self._config["scheduler"].get("step_size", 7))
+
+    @property
+    def gamma(self) -> float:
+        return float(self._config["scheduler"].get("gamma", 0.1))
 
     @property
     def default_transform(self):
         """
-        根據 backbone 模型返回預設的數據增強轉換
-        :raises ValueError: 若 backbone 無效
+        預設 Resnet 使用的 transform
         """
         backbone = str(self._config["model"]["backbone"]).lower()
         transform_map = {
@@ -126,8 +135,9 @@ class Config:
     @property
     def backbone_model(self) -> torch.nn.Module:
         """
-        返回指定 backbone 模型的實例
-        :raises ValueError: 若 backbone 無效
+        backbone model
+
+        resnet18 | resnet34 | resnet50 | resnet101
         """
         backbone = str(self._config["model"]["backbone"]).lower()
         pretrained = bool(self._config["model"]["pretrained"])
@@ -142,7 +152,6 @@ class Config:
         if backbone not in model_map:
             raise ValueError(f"Unsupported backbone '{backbone}'")
 
-        # 預訓練權重設置
         weights = None
         if pretrained:
             weights_map = {
@@ -154,20 +163,3 @@ class Config:
             weights = weights_map.get(backbone)
 
         return model_map[backbone](weights=weights, progress=True)
-
-
-    @property
-    def label_smoothing(self) -> float:
-        return float(self._config["loss"].get("label_smoothing", 0.0))
-
-    @property
-    def use_class_weight(self) -> bool:
-        return bool(self._config["loss"].get("class_weight", False))
-
-    @property
-    def scheduler_step_size(self) -> int:
-        return int(self._config["scheduler"].get("step_size", 7))
-    
-    @property
-    def gamma(self) -> float:
-        return float(self._config["scheduler"].get("gamma", 0.1))
