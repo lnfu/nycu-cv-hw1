@@ -101,6 +101,10 @@ class Config:
             raise ValueError(f"Unexpected optimizer '{optimizer_type}'")
 
     @property
+    def inference_model(self):
+        return str(self._config["model"]["inference"])
+
+    @property
     def default_transform(self):
         """
         根據 backbone 模型返回預設的數據增強轉換
@@ -150,3 +154,20 @@ class Config:
             weights = weights_map.get(backbone)
 
         return model_map[backbone](weights=weights, progress=True)
+
+
+    @property
+    def label_smoothing(self) -> float:
+        return float(self._config["loss"].get("label_smoothing", 0.0))
+
+    @property
+    def use_class_weight(self) -> bool:
+        return bool(self._config["loss"].get("class_weight", False))
+
+    @property
+    def scheduler_step_size(self) -> int:
+        return int(self._config["scheduler"].get("step_size", 7))
+    
+    @property
+    def gamma(self) -> float:
+        return float(self._config["scheduler"].get("gamma", 0.1))
