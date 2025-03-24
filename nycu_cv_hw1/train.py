@@ -94,7 +94,7 @@ def train(
             loss.backward()
             optimizer.step()
 
-            train_loss += loss.item()  # * inputs.size(0)
+            train_loss += loss.item() * inputs.size(0)
             train_correct += (preds == labels).sum().item()  # 預測正確
             train_size += inputs.size(0)
 
@@ -113,7 +113,7 @@ def train(
 
                 loss: torch.Tensor = loss_fn(outputs, labels)
 
-                val_loss += loss.item()  # * inputs.size(0)
+                val_loss += loss.item() * inputs.size(0)
                 val_correct += (preds == labels).sum().item()
                 val_size += inputs.size(0)
 
@@ -182,7 +182,7 @@ def main(config_file):
 
         torch.save(model, MODEL_DIR_PATH / filename)
         logging.info(f"Model saved as {filename}")
-        print(real_num_epoch) # TODO
+        print(real_num_epoch)  # TODO
         print(filename)
         writer.close()
 
