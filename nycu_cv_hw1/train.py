@@ -39,10 +39,10 @@ def get_data_loaders(config: Config):
         all_dataset, [train_size, val_size]
     )
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=config.batch_size, shuffle=True
+        train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=1
     )
     val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=config.batch_size, shuffle=False
+        val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=1
     )
     return train_loader, val_loader, len(all_dataset.class_to_idx), cw
 
