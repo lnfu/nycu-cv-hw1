@@ -10,21 +10,22 @@ class Model(torch.nn.Module):
         super().__init__()
         self.backbone = backbone
         fc_in_features = self.backbone.fc.in_features
-        # for layer in self.backbone.children():
-        #     for bottleneck in layer.children():
-        #         for l in bottleneck.children():
-        #             if l.__class__.__name__ == "BatchNorm2d":
-        #                 for param in l.parameters():
-        #                     param.requires_grad = True
-        #             else:
-        #                 for param in l.parameters():
-        #                     param.requires_grad = False
+        for layer in self.backbone.children():
+            for bottleneck in layer.children():
+                for l in bottleneck.children():
+                    if l.__class__.__name__ == "BatchNorm2d":
+                        for param in l.parameters():
+                            param.requires_grad = True
+                    else:
+                        for param in l.parameters():
+                            param.requires_grad = False
+
         self.backbone.fc = torch.nn.Linear(fc_in_features, num_classes)
+        torch.nn.init.xavier_uniform_(self.backbone.fc.weight)
+
         num_params = sum(p.numel() for p in self.backbone.parameters())
         logging.info(f"# of parameters = {humanize.intword(num_params)}")
         assert num_params <= 1e8
-
-        # torch.nn.init.xavier_uniform_(self.backbone.fc.weight)
 
         # self.backbone.fc = torch.nn.Sequential(
         #     torch.nn.Linear(fc_in_features, 1024),

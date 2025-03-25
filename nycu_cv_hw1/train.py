@@ -1,3 +1,5 @@
+import click
+
 import datetime
 import logging
 import pathlib
@@ -6,36 +8,23 @@ import torch
 import torch.utils.tensorboard as tensorboard
 import torchvision
 import tqdm
-import torchvision.transforms as transforms
 import sklearn.utils.class_weight as class_weight
 
 from nycu_cv_hw1.config import Config
 from nycu_cv_hw1.model import Model
+from nycu_cv_hw1.transform import train_transform
 
 DATA_DIR_PATH = pathlib.Path("data")
 LOG_DIR_PATH = pathlib.Path("logs")
 MODEL_DIR_PATH = pathlib.Path("models")
 MODEL_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
-config = Config("config.yaml")
 
-tf = transforms.Compose(
-    [
-        transforms.RandomRotation(10),
-        transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(contrast=0.2, saturation=0.2, brightness=0.2, hue=0.2),
-        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),  # Convert image to PyTorch tensor
-    ]
-)
-
-
-def get_data_loaders():
+def get_data_loaders(config: Config):
 
     all_dataset = torchvision.datasets.ImageFolder(
         root=DATA_DIR_PATH / "all",
-        transform=tf,
+        transform=train_transform,
         is_valid_file=lambda path: path.endswith(".jpg"),
     )
     cw = torch.FloatTensor(
@@ -44,21 +33,22 @@ def get_data_loaders():
         )
     )
     logging.info(f"dataset size = {len(all_dataset)}")
-    train_size = int(0.8 * len(all_dataset))
+    train_size = int(0.8 * len(all_dataset))  # TODO config
     val_size = len(all_dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(
         all_dataset, [train_size, val_size]
     )
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=config.batch_size, shuffle=True
+        train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=1
     )
     val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=config.batch_size, shuffle=False
+        val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=1
     )
     return train_loader, val_loader, len(all_dataset.class_to_idx), cw
 
 
 def train(
+    config: Config,
     device: torch.torch.device,
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -66,39 +56,45 @@ def train(
     train_loader: torch.utils.data.DataLoader,
     val_loader: torch.utils.data.DataLoader,
     writer: tensorboard.writer.SummaryWriter,
-    cw,  # class_weight TODO
-):
+    cw: torch.Tensor,  # class_weight
+) -> int:
 
-    loss_fn = torch.nn.CrossEntropyLoss(
-        label_smoothing=0.1,
-        weight=cw.to(device),
-        # reduction="mean" # TODO
-    )  # TODO label_smoothing=0.1?
+    if config.use_class_weight:
+        loss_fn = torch.nn.CrossEntropyLoss(
+            label_smoothing=config.label_smoothing,
+            weight=cw.to(device),
+            # reduction="mean" # TODO
+        )
+    else:
+        loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
+
+    real_num_epoch = 0
 
     for epoch in range(config.num_epoch):
+        real_num_epoch += 1
 
         train_loss, val_loss = 0.0, 0.0
         train_correct, val_correct = 0, 0
         train_size, val_size = 0, 0
 
-        model.train()  # 轉成 training mode
+        model.train()
         for inputs, labels in tqdm.tqdm(
             train_loader, desc=f"Epoch {epoch + 1}/{config.num_epoch}", ncols=100
         ):
             optimizer.zero_grad()
 
-            inputs = inputs.to(device)  # TODO type hint
-            labels = labels.to(device)  # TODO type hint torch.Size([32])
+            inputs: torch.Tensor = inputs.to(device)
+            labels: torch.Tensor = labels.to(device)  # torch.Size([32])
 
             outputs = model(inputs)  # torch.Size([32, 100]) 機率
             preds = torch.argmax(outputs, dim=1)
 
-            loss = loss_fn(outputs, labels)
+            loss: torch.Tensor = loss_fn(outputs, labels)
 
             loss.backward()
             optimizer.step()
 
-            train_loss += loss.item()  # * inputs.size(0)
+            train_loss += loss.item() * inputs.size(0)
             train_correct += (preds == labels).sum().item()  # 預測正確
             train_size += inputs.size(0)
 
@@ -109,15 +105,15 @@ def train(
             for inputs, labels in tqdm.tqdm(
                 val_loader, desc=f"Epoch {epoch + 1}/{config.num_epoch}", ncols=100
             ):
-                inputs = inputs.to(device)
-                labels = labels.to(device)
+                inputs: torch.Tensor = inputs.to(device)
+                labels: torch.Tensor = labels.to(device)
 
                 outputs = model(inputs)
                 preds = torch.argmax(outputs, dim=1)
 
-                loss = loss_fn(outputs, labels)
+                loss: torch.Tensor = loss_fn(outputs, labels)
 
-                val_loss += loss.item()  # * inputs.size(0)
+                val_loss += loss.item() * inputs.size(0)
                 val_correct += (preds == labels).sum().item()
                 val_size += inputs.size(0)
 
@@ -131,10 +127,6 @@ def train(
             f"Epoch {epoch+1}: Train loss: {train_loss:.4f}, Val loss: {val_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}"
         )
 
-        # writer.add_scalar("Loss/Train", train_loss, epoch + 1)
-        # writer.add_scalar("Loss/Validation", val_loss, epoch + 1)
-        # writer.add_scalar("Accuracy/Train", train_acc, epoch + 1)
-        # writer.add_scalar("Accuracy/Validation", val_acc, epoch + 1)
         writer.add_scalars(
             "Loss", {"Train": train_loss, "Validation": val_loss}, epoch + 1
         )
@@ -142,42 +134,57 @@ def train(
             "Accuracy", {"Train": train_acc, "Validation": val_acc}, epoch + 1
         )
 
+    return real_num_epoch
 
-def main():
+
+@click.command()
+@click.argument("config_file", type=click.Path(exists=True))
+def main(config_file):
+
+    config = Config(config_file)
 
     device = torch.torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"device: {device}")
 
-    train_loader, val_loader, num_classes, cw = get_data_loaders()
+    train_loader, val_loader, num_classes, cw = get_data_loaders(config)
 
     # Model
     model = Model(config.backbone_model, num_classes).to(device)
 
     # Training
-    writer = tensorboard.writer.SummaryWriter(log_dir=LOG_DIR_PATH)
+    current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"lr_{config.lr}_batch_{config.batch_size}_{current_time}.pt"
+    writer = tensorboard.writer.SummaryWriter(log_dir=LOG_DIR_PATH / filename)
 
     optimizer = config.get_optimizer(model.parameters())
 
-    # scheduler = torch.optim.lr_scheduler.StepLR(
-    #     optimizer, step_size=7, gamma=0.1
-    # )  # TODO config
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=config.scheduler_step_size, gamma=config.gamma
+    )
 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.5)
+    real_num_epoch = 0
 
     try:
-        train(device, model, optimizer, scheduler, train_loader, val_loader, writer, cw)
+        real_num_epoch = train(
+            config=config,
+            device=device,
+            model=model,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            writer=writer,
+            cw=cw,
+        )
     except KeyboardInterrupt:
         logging.warning("Training interrupted! Saving model before exiting...")
     finally:
-        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"epoch_{config.num_epoch}_lr_{config.lr}_batch_{config.batch_size}_{current_time}.pt"
 
         torch.save(model, MODEL_DIR_PATH / filename)
         logging.info(f"Model saved as {filename}")
+        print(real_num_epoch)  # TODO
         print(filename)
         writer.close()
-
-    # torch.save(model.state_dict(), 'model.pt') # TODO only save weights
 
 
 if __name__ == "__main__":

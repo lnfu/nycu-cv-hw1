@@ -3,18 +3,24 @@ import pathlib
 import typing
 
 import torch
-import torch.utils.tensorboard as tensorboard
 import torchvision
 import tqdm
 from PIL import Image, ImageFile
 
 from nycu_cv_hw1.config import Config
-from nycu_cv_hw1.model import Model
+from nycu_cv_hw1.transform import test_transform
 
 DATA_DIR_PATH = pathlib.Path("data")
 MODEL_DIR_PATH = pathlib.Path("models")
 
 config = Config("config.yaml")
+
+# INDEX -> CLASS
+all_dataset = torchvision.datasets.ImageFolder(
+    root=DATA_DIR_PATH / "all",
+    is_valid_file=lambda path: path.endswith(".jpg"),
+)
+idx_to_class = {v: k for k, v in all_dataset.class_to_idx.items()}
 
 
 class TestDataset(torch.utils.data.Dataset):
@@ -28,11 +34,10 @@ class TestDataset(torch.utils.data.Dataset):
         if isinstance(image_dir_path, str):
             image_dir_path = pathlib.Path(image_dir_path)
 
-        # TODO 如果不是 pathlib.Path raise Exception
+        if not isinstance(image_dir_path, pathlib.Path):
+            raise ValueError()
 
-        self.image_file_paths = sorted(
-            pathlib.Path(image_dir_path).glob("*.jpg")
-        )  # 讀取所有圖片
+        self.image_file_paths = sorted(pathlib.Path(image_dir_path).glob("*.jpg"))
         self.transform = transform
 
     def __len__(self) -> int:
@@ -51,47 +56,32 @@ def main():
     device = torch.torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"device: {device}")
 
-    # num_classes = 100  # TODO
-    # backbone = torchvision.models.resnet101(
-    #     weights=torchvision.models.ResNet101_Weights.DEFAULT, progress=True
-    # )
-    # TODO default get latest model
-    model = torch.load(MODEL_DIR_PATH / "20250319_190856.pt", weights_only=False)
-    model.eval()
-
-    # transform = torchvision.models.ResNet101_Weights.DEFAULT.transforms()
-    tf = torchvision.transforms.Compose(
-        [
-            torchvision.transforms.Resize(256),
-            torchvision.transforms.CenterCrop(224),
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(
-                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-            ),
-        ]
+    model = torch.load(
+        MODEL_DIR_PATH / config.inference_model,
+        weights_only=False,
     )
 
-    test_dataset = TestDataset(image_dir_path=DATA_DIR_PATH / "test", transform=tf)
+    test_dataset = TestDataset(
+        image_dir_path=DATA_DIR_PATH / "test", transform=test_transform
+    )
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=config.batch_size, shuffle=False
     )
 
     print("image_name,pred_label")
 
-    for inputs, image_names in test_loader:  # TODO inputs or images (naming)
-        inputs = inputs.to(device)  # TODO type hint
+    model.eval()
+    for inputs, image_names in tqdm.tqdm(test_loader, desc="", ncols=100):
 
-        outputs = model(inputs)
-        # with torch.no_grad():  # 禁用梯度計算
-        #     outputs = model(inputs)
+        inputs: torch.Tensor = inputs.to(device)
 
-        # TODO 印出來, 一個 row 一筆資料 (output, image_name)
-        # image_name,pred_label
+        with torch.no_grad():
+            outputs = model(inputs)
 
         for output, image_name in zip(outputs, image_names):
-            index = torch.argmax(output, dim=0)  # TODO
+            index = torch.argmax(output, dim=0)
             print(image_name, end=",")
-            print(index.item(), end="\n")
+            print(idx_to_class[index.item()], end="\n")
 
 
 if __name__ == "__main__":
