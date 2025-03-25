@@ -68,12 +68,12 @@ def plot_class_distribution(all_counts, idx_to_class, save_path=None, sort_by_co
     
     # Create the bars
     x = np.arange(len(classes))
-    plt.bar(x, all_values, label='All Data')
+    plt.bar(x, all_values, label='train/val data')
     
     # Add labels, title, and legend
-    plt.xlabel('Class Index')
-    plt.ylabel('Number of Images')
-    plt.title('Number of Images per Class in All Dataset')
+    plt.xlabel('Class', fontsize=20)
+    plt.ylabel('# of Images', fontsize=20)
+    plt.title('Class Distribution', fontsize=20)
     plt.xticks(x, classes, rotation=90)
     plt.legend()
     

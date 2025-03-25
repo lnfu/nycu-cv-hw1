@@ -11,7 +11,7 @@ import tqdm
 import sklearn.utils.class_weight as class_weight
 
 from nycu_cv_hw1.config import Config
-from nycu_cv_hw1.model import Model
+from nycu_cv_hw1.model2 import Model
 from nycu_cv_hw1.transform import train_transform
 
 DATA_DIR_PATH = pathlib.Path("data")
@@ -153,10 +153,11 @@ def main(config_file):
 
     # Training
     current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"next_lr_{config.lr}_batch_{config.batch_size}_{current_time}.pt"
+    filename = f"latest_lr_{config.lr}_batch_{config.batch_size}_{current_time}.pt"
     writer = tensorboard.writer.SummaryWriter(log_dir=LOG_DIR_PATH / filename)
 
     # optimizer = config.get_optimizer(model.parameters())
+
     optimizer = torch.optim.SGD(
         [
             {"params": model.backbone.fc.parameters(), "lr": 0.01},
@@ -168,10 +169,12 @@ def main(config_file):
         momentum=0.9,
         weight_decay=1e-4,
     )
+
+    # scheduler = torch.optim.lr_scheduler.StepLR(
+    #     optimizer, step_size=config.scheduler_step_size, gamma=config.gamma
+    # )
     
-    scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=config.scheduler_step_size, gamma=config.gamma
-    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30)
 
     real_num_epoch = 0
 

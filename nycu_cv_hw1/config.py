@@ -122,6 +122,7 @@ class Config:
             "resnet34": torchvision.models.ResNet34_Weights.DEFAULT.transforms(),
             "resnet50": torchvision.models.ResNet50_Weights.DEFAULT.transforms(),
             "resnet101": torchvision.models.ResNet101_Weights.DEFAULT.transforms(),
+            "resnext101_64x4d": torchvision.models.ResNeXt101_64X4D_Weights.DEFAULT.transforms(),
         }
 
         if backbone not in transform_map:
@@ -144,6 +145,7 @@ class Config:
             "resnet34": torchvision.models.resnet34,
             "resnet50": torchvision.models.resnet50,
             "resnet101": torchvision.models.resnet101,
+            "resnext101_64x4d": torchvision.models.resnext101_64x4d,
         }
 
         if backbone not in model_map:
@@ -156,6 +158,7 @@ class Config:
                 "resnet34": torchvision.models.ResNet34_Weights.DEFAULT,
                 "resnet50": torchvision.models.ResNet50_Weights.DEFAULT,
                 "resnet101": torchvision.models.ResNet101_Weights.DEFAULT,
+                "resnext101_64x4d": torchvision.models.ResNeXt101_64X4D_Weights.DEFAULT,
             }
             weights = weights_map.get(backbone)
 
