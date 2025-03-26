@@ -10,33 +10,52 @@
 
 ## Description
 
-Image classification
+This repo contains the implementation of transfer learning for image classification. The goal is to classify images into 100 categories, using a modified version of the ResNext101_64x4d backbone.
 
-## Installation & Usage
+## Setup and Usage
+
+Follow the steps below to set up and run the project:
 
 1. Clone the repository:
-   ```sh
+   ```bash
    git clone https://github.com/lnfu/nycu-cv-hw1.git
    cd nycu-cv-hw1
    ```
+
 2. Install dependencies:
-   ```sh
+   ```bash
    pip install -r requirements.txt --index-url https://download.pytorch.org/whl/cu126 --extra-index-url https://pypi.org/simple --break-system-packages
    ```
-3. Run the main script:
-   ```sh
+
+3. Run the following command to aggregate the training and validation datasets into a single dataset:
+
+   ```bash
+   # This will merge the 'train' and 'val' datasets into 'all', and future scripts will use 'all'.
+   python -m nycu_cv_hw1.utils.aggregate_data
+   ```
+
+4. Train the model
+
+   ```bash
    python -m nycu_cv_hw1.train config.yaml
-   python -m nycu_cv_hw1.test > prediction.csv
+   ```
+
+5. Inference
+
+   ```sh
+   python -m nycu_cv_hw1.test config.yaml > prediction.csv
+   python -m nycu_cv_hw1.tta_test config.yaml > prediction.csv # use Test-Time Augmentation (TTA)
    ```
 
 ## Repository Structure
 
 ```
 ├── data/              # Dataset used for training/testing (if applicable)
-│   ├── all
-│   ├── train
-│   ├── val
-│   └── test
+│   ├── all            # Aggregated training and validation data
+│   ├── train          # Training data
+│   ├── val            # Validation data
+│   └── test           # Test data
+├── models/            # Model
 ├── logs/              # Training history
 ├── nycu_cv_hw1/       # Main package containing source code
 ├── config.yaml        # Configuration file for training (e.g., hyperparameters)
@@ -45,3 +64,5 @@ Image classification
 ```
 
 ## Results
+
+<!-- TODO -->
