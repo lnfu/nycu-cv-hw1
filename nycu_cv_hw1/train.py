@@ -33,7 +33,7 @@ def get_data_loaders(config: Config):
         )
     )
     logging.info(f"dataset size = {len(all_dataset)}")
-    train_size = int(0.8 * len(all_dataset))  # TODO config
+    train_size = int(0.9 * len(all_dataset))  # TODO config
     val_size = len(all_dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(
         all_dataset, [train_size, val_size]
@@ -133,6 +133,9 @@ def train(
         writer.add_scalars(
             "Accuracy", {"Train": train_acc, "Validation": val_acc}, epoch + 1
         )
+        
+        if epoch % 5 == 0:
+            torch.save(model, MODEL_DIR_PATH / f"cw_{epoch}.pt")
 
     return real_num_epoch
 
@@ -145,6 +148,7 @@ def main(config_file):
 
     device = torch.torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"device: {device}")
+    print(device)
 
     train_loader, val_loader, num_classes, cw = get_data_loaders(config)
 
@@ -153,26 +157,23 @@ def main(config_file):
 
     # Training
     current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"next_lr_{config.lr}_batch_{config.batch_size}_{current_time}.pt"
+    filename = f"cw_lr_{config.lr}_batch_{config.batch_size}_{current_time}.pt"
     writer = tensorboard.writer.SummaryWriter(log_dir=LOG_DIR_PATH / filename)
+    logging.info(f"{filename}")
 
-    # optimizer = config.get_optimizer(model.parameters())
     optimizer = torch.optim.SGD(
         [
-            {"params": model.backbone.fc.parameters(), "lr": 0.01},
-            {"params": model.backbone.layer1.parameters(), "lr": 0.001},
+            {"params": model.backbone.fc.parameters(), "lr": 0.1},
+            {"params": model.backbone.layer4.parameters(), "lr": 0.01},
+            {"params": model.backbone.layer3.parameters(), "lr": 0.005},
             {"params": model.backbone.layer2.parameters(), "lr": 0.001},
-            {"params": model.backbone.layer3.parameters(), "lr": 0.001},
-            {"params": model.backbone.layer4.parameters(), "lr": 0.001},
+            {"params": model.backbone.layer1.parameters(), "lr": 0.0005},
         ],
         momentum=0.9,
         weight_decay=1e-4,
     )
-    
-    scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=config.scheduler_step_size, gamma=config.gamma
-    )
 
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
     real_num_epoch = 0
 
     try:

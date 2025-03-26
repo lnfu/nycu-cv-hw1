@@ -71,14 +71,22 @@ def main():
     print("image_name,pred_label")
 
     model.eval()
+    num_inferences = 10  
+
     for inputs, image_names in tqdm.tqdm(test_loader, desc="", ncols=100):
 
         inputs: torch.Tensor = inputs.to(device)
 
         with torch.no_grad():
-            outputs = model(inputs)
+            avg_outputs = torch.zeros((inputs.shape[0], len(idx_to_class)), device=device)
+            
+            for _ in range(num_inferences):
+                outputs = model(inputs)
+                avg_outputs += outputs
+            
+            avg_outputs /= num_inferences  # 取平均
 
-        for output, image_name in zip(outputs, image_names):
+        for output, image_name in zip(avg_outputs, image_names):
             index = torch.argmax(output, dim=0)
             print(image_name, end=",")
             print(idx_to_class[index.item()], end="\n")
