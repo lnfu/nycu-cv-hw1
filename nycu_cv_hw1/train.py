@@ -98,6 +98,10 @@ def train(
             train_correct += (preds == labels).sum().item()  # 預測正確
             train_size += inputs.size(0)
 
+        if train_size > float(0):
+            train_loss = float(train_loss) / float(train_size)
+            train_acc = float(train_correct) / float(train_size)
+
         model.eval()
         with torch.no_grad():
             for inputs, labels in tqdm.tqdm(
@@ -117,11 +121,9 @@ def train(
 
         scheduler.step()
 
-        train_loss = float(train_loss) / float(train_size)
-        val_loss = float(val_loss) / float(val_size)
-
-        train_acc = float(train_correct) / float(train_size)
-        val_acc = float(val_correct) / float(val_size)
+        if val_size > float(0):
+            val_loss = float(val_loss) / float(val_size)
+            val_acc = float(val_correct) / float(val_size)
 
         logging.info(
             f"Epoch {epoch+1}: Train loss: {train_loss:.4f}, Val loss: {val_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}"
@@ -133,7 +135,7 @@ def train(
         writer.add_scalars(
             "Accuracy", {"Train": train_acc, "Validation": val_acc}, epoch + 1
         )
-        
+
         if epoch % 5 == 0:
             torch.save(model, MODEL_DIR_PATH / f"final_{epoch}.pt")
 
