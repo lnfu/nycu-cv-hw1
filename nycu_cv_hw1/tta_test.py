@@ -13,7 +13,6 @@ from nycu_cv_hw1.transform import tta_transforms
 DATA_DIR_PATH = pathlib.Path("data")
 MODEL_DIR_PATH = pathlib.Path("models")
 
-config = Config("config.yaml")
 
 # INDEX -> CLASS
 all_dataset = torchvision.datasets.ImageFolder(
@@ -56,7 +55,11 @@ class TtaTestDataset(torch.utils.data.Dataset):
         return image_list, img_path.stem
 
 
-def main():
+@click.command()
+@click.argument("config_file", type=click.Path(exists=True), default="config.yaml")
+def main(config_file):
+
+    config = Config(config_file)
 
     device = torch.torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"device: {device}")

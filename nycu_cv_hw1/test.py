@@ -1,7 +1,7 @@
 import logging
 import pathlib
 import typing
-
+import click
 import torch
 import torchvision
 import tqdm
@@ -12,8 +12,6 @@ from nycu_cv_hw1.transform import test_transform
 
 DATA_DIR_PATH = pathlib.Path("data")
 MODEL_DIR_PATH = pathlib.Path("models")
-
-config = Config("config.yaml")
 
 # INDEX -> CLASS
 all_dataset = torchvision.datasets.ImageFolder(
@@ -50,8 +48,11 @@ class TestDataset(torch.utils.data.Dataset):
             image = self.transform(image)
         return image, img_path.stem
 
+@click.command()
+@click.argument("config_file", type=click.Path(exists=True), default="config.yaml")
+def main(config_file):
 
-def main():
+    config = Config(config_file)
 
     device = torch.torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"device: {device}")

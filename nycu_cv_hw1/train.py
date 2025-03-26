@@ -37,7 +37,7 @@ def get_data_loaders(config: Config):
         )
     )
     logging.info(f"dataset size = {len(all_dataset)}")
-    train_size = int(1.0 * len(all_dataset))  # TODO config
+    train_size = int(0.8 * len(all_dataset))  # TODO config
     val_size = len(all_dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(
         all_dataset, [train_size, val_size]
@@ -178,7 +178,7 @@ def get_confusion_matrix_figure(cm):
 
 
 @click.command()
-@click.argument("config_file", type=click.Path(exists=True))
+@click.argument("config_file", type=click.Path(exists=True), default="config.yaml")
 def main(config_file):
 
     config = Config(config_file)
