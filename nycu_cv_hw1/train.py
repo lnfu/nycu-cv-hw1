@@ -33,7 +33,7 @@ def get_data_loaders(config: Config):
         )
     )
     logging.info(f"dataset size = {len(all_dataset)}")
-    train_size = int(0.9 * len(all_dataset))  # TODO config
+    train_size = int(1.0 * len(all_dataset))  # TODO config
     val_size = len(all_dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(
         all_dataset, [train_size, val_size]
@@ -135,7 +135,7 @@ def train(
         )
         
         if epoch % 5 == 0:
-            torch.save(model, MODEL_DIR_PATH / f"cw_{epoch}.pt")
+            torch.save(model, MODEL_DIR_PATH / f"final_{epoch}.pt")
 
     return real_num_epoch
 
@@ -148,7 +148,6 @@ def main(config_file):
 
     device = torch.torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"device: {device}")
-    print(device)
 
     train_loader, val_loader, num_classes, cw = get_data_loaders(config)
 
@@ -157,7 +156,7 @@ def main(config_file):
 
     # Training
     current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"cw_lr_{config.lr}_batch_{config.batch_size}_{current_time}.pt"
+    filename = f"final_batch_{config.batch_size}_{current_time}.pt"
     writer = tensorboard.writer.SummaryWriter(log_dir=LOG_DIR_PATH / filename)
     logging.info(f"{filename}")
 

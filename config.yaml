@@ -5,20 +5,9 @@ training:
 model:
   backbone: "resnext101_64x4d"
   pretrained: true
-  inference: "next_lr_0.005_batch_16_20250325_155809.pt"
-
-# optimizer:
-#   type: "Adam"           # Adam | SGD | RMSprop
-#   learning_rate: 0.01
-#   weight_decay: 0
-#   momentum: 0.9          # SGD, RMSprop
-#   epsilon: 1e-8          # Adam
+  inference: "next_lr_0.001_batch_32_20250325_194723.pt"
 
 loss:
   label_smoothing: 0.0
-  class_weight: True
+  class_weight: False
   reduction: "mean" # TODO
-
-# scheduler:
-#   step_size: 2
-#   gamma: 0.7

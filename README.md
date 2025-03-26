@@ -25,12 +25,15 @@ Image classification
    ```
 3. Run the main script:
    ```sh
+   python -m nycu_cv_hw1.train config.yaml
+   python -m nycu_cv_hw1.test > prediction.csv
    ```
 
 ## Repository Structure
 
 ```
 ├── data/              # Dataset used for training/testing (if applicable)
+│   ├── all
 │   ├── train
 │   ├── val
 │   └── test
@@ -42,34 +45,3 @@ Image classification
 ```
 
 ## Results
-
-## Notes
-
-```
-[
-    "ResNeXt101_32X8D_Weights",
-    "ResNeXt101_64X4D_Weights",
-    "ResNeXt50_32X4D_Weights",
-    "ResNet",
-    "ResNet101_Weights",
-    "ResNet152_Weights",
-    "ResNet18_Weights",
-    "ResNet34_Weights",
-    "ResNet50_Weights",
-    "Wide_ResNet101_2_Weights",
-    "Wide_ResNet50_2_Weights",
-    "resnet",
-    "resnet101",
-    "resnet152",
-    "resnet18",
-    "resnet34",
-    "resnet50",
-    "resnext101_32x8d",
-    "resnext101_64x4d",
-    "resnext50_32x4d",
-    "wide_resnet101_2",
-    "wide_resnet50_2",
-]
-```
-
-## Acknowledgments

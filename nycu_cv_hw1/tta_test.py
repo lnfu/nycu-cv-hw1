@@ -8,7 +8,7 @@ import tqdm
 from PIL import Image, ImageFile
 
 from nycu_cv_hw1.config import Config
-from nycu_cv_hw1.transform import test_transform
+from nycu_cv_hw1.transform import tta_transforms
 
 DATA_DIR_PATH = pathlib.Path("data")
 MODEL_DIR_PATH = pathlib.Path("models")
@@ -23,13 +23,13 @@ all_dataset = torchvision.datasets.ImageFolder(
 idx_to_class = {v: k for k, v in all_dataset.class_to_idx.items()}
 
 
-class TestDataset(torch.utils.data.Dataset):
+class TtaTestDataset(torch.utils.data.Dataset):
     image_file_paths: typing.List[pathlib.Path]
 
     def __init__(
         self,
         image_dir_path: typing.Union[str, pathlib.Path],
-        transform: typing.Optional[typing.Callable] = None,
+        tta_transforms: typing.Optional[typing.Callable] = None,
     ):
         if isinstance(image_dir_path, str):
             image_dir_path = pathlib.Path(image_dir_path)
@@ -38,7 +38,7 @@ class TestDataset(torch.utils.data.Dataset):
             raise ValueError()
 
         self.image_file_paths = sorted(pathlib.Path(image_dir_path).glob("*.jpg"))
-        self.transform = transform
+        self.tta_transforms = tta_transforms
 
     def __len__(self) -> int:
         return len(self.image_file_paths)
@@ -46,9 +46,14 @@ class TestDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx) -> typing.Tuple[ImageFile.ImageFile, str]:
         img_path = self.image_file_paths[idx]
         image = Image.open(img_path).convert("RGB")
-        if self.transform:
-            image = self.transform(image)
-        return image, img_path.stem
+
+        image_list = []
+        if self.tta_transforms:
+            for transform in self.tta_transforms:
+                t_image = transform(image)
+                image_list.append(t_image)
+
+        return image_list, img_path.stem
 
 
 def main():
@@ -61,24 +66,26 @@ def main():
         weights_only=False,
     )
 
-    test_dataset = TestDataset(
-        image_dir_path=DATA_DIR_PATH / "test", transform=test_transform
+    tta_test_dataset = TtaTestDataset(
+        image_dir_path=DATA_DIR_PATH / "test", tta_transforms=tta_transforms
     )
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=config.batch_size, shuffle=False
+    tta_test_loader = torch.utils.data.DataLoader(
+        tta_test_dataset, batch_size=config.batch_size, shuffle=False
     )
 
     print("image_name,pred_label")
 
     model.eval()
-    for inputs, image_names in tqdm.tqdm(test_loader, desc="", ncols=100):
+    for image_lists, image_names in tqdm.tqdm(tta_test_loader, desc="", ncols=100):
+        outputs_list = []
+        for inputs in image_lists:
+            inputs: torch.Tensor = inputs.to(device)
+            with torch.no_grad():
+                outputs = model(inputs)
+                outputs_list.append(outputs)
+        avg_outputs = torch.mean(torch.stack(outputs_list), dim=0)
 
-        inputs: torch.Tensor = inputs.to(device)
-
-        with torch.no_grad():
-            outputs = model(inputs)
-
-        for output, image_name in zip(outputs, image_names):
+        for output, image_name in zip(avg_outputs, image_names):
             index = torch.argmax(output, dim=0)
             print(image_name, end=",")
             print(idx_to_class[index.item()], end="\n")

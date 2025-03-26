@@ -47,51 +47,6 @@ class Config:
         return int(self._config.get("training", {}).get("batch_size", 32))
 
     @property
-    def lr(self) -> float:
-        """learning rate, 預設值 1e-3"""
-        return float(self._config.get("optimizer", {}).get("learning_rate", 1e-3))
-
-    @property
-    def weight_decay(self) -> float:
-        """weight decay, 預設值 0.0"""
-        return float(self._config.get("optimizer", {}).get("weight_decay", 0.0))
-
-    @property
-    def _optimizer_type(self) -> str:
-        optimizer = str(self._config.get("optimizer", {}).get("type", "adam")).lower()
-        if optimizer not in {"adam", "sgd", "rmsprop"}:
-            raise ValueError()
-        return optimizer
-
-    def get_optimizer(self, model_params) -> torch.optim.Optimizer:
-        """
-        optimizer, 預設 Adam
-        """
-        if self._optimizer_type == "adam":
-            return torch.optim.Adam(
-                model_params,
-                lr=self.lr,
-                weight_decay=self.weight_decay,
-                eps=float(self._config.get("optimizer", {}).get("epsilon", 1e-8)),
-            )
-        elif self._optimizer_type == "sgd":
-            return torch.optim.SGD(
-                model_params,
-                lr=self.lr,
-                weight_decay=self.weight_decay,
-                momentum=float(self._config.get("optimizer", {}).get("momentum", 0.9)),
-            )
-        elif self._optimizer_type == "rmsprop":
-            return torch.optim.RMSprop(
-                model_params,
-                lr=self.lr,
-                weight_decay=self.weight_decay,
-                momentum=float(self._config.get("optimizer", {}).get("momentum", 0.9)),
-            )
-        else:
-            raise ValueError()
-
-    @property
     def inference_model(self) -> str:
         return str(self._config["model"]["inference"])
 
@@ -102,14 +57,6 @@ class Config:
     @property
     def use_class_weight(self) -> bool:
         return bool(self._config["loss"].get("class_weight", False))
-
-    @property
-    def scheduler_step_size(self) -> int:
-        return int(self._config["scheduler"].get("step_size", 7))
-
-    @property
-    def gamma(self) -> float:
-        return float(self._config["scheduler"].get("gamma", 0.1))
 
     @property
     def default_transform(self):
