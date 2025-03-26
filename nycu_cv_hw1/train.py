@@ -74,6 +74,7 @@ def train(
         real_num_epoch += 1
 
         train_loss, val_loss = 0.0, 0.0
+        train_acc, val_acc = 0.0, 0.0
         train_correct, val_correct = 0, 0
         train_size, val_size = 0, 0
 
