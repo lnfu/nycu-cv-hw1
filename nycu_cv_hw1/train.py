@@ -9,10 +9,14 @@ import torch.utils.tensorboard as tensorboard
 import torchvision
 import tqdm
 import sklearn.utils.class_weight as class_weight
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from nycu_cv_hw1.config import Config
 from nycu_cv_hw1.model import Model
 from nycu_cv_hw1.transform import train_transform
+from sklearn.metrics import confusion_matrix
+
 
 DATA_DIR_PATH = pathlib.Path("data")
 LOG_DIR_PATH = pathlib.Path("logs")
@@ -78,6 +82,7 @@ def train(
         train_correct, val_correct = 0, 0
         train_size, val_size = 0, 0
 
+        train_all_preds, train_all_labels = [], []
         model.train()
         for inputs, labels in tqdm.tqdm(
             train_loader, desc=f"Epoch {epoch + 1}/{config.num_epoch}", ncols=100
@@ -98,12 +103,15 @@ def train(
             train_loss += loss.item() * inputs.size(0)
             train_correct += (preds == labels).sum().item()  # 預測正確
             train_size += inputs.size(0)
+            train_all_preds.extend(preds.cpu().numpy())
+            train_all_labels.extend(labels.cpu().numpy())
 
         if train_size > float(0):
             train_loss = float(train_loss) / float(train_size)
             train_acc = float(train_correct) / float(train_size)
 
         model.eval()
+        val_all_preds, val_all_labels = [], []
         with torch.no_grad():
             for inputs, labels in tqdm.tqdm(
                 val_loader, desc=f"Epoch {epoch + 1}/{config.num_epoch}", ncols=100
@@ -119,6 +127,8 @@ def train(
                 val_loss += loss.item() * inputs.size(0)
                 val_correct += (preds == labels).sum().item()
                 val_size += inputs.size(0)
+                val_all_preds.extend(preds.cpu().numpy())
+                val_all_labels.extend(labels.cpu().numpy())
 
         scheduler.step()
 
@@ -128,6 +138,19 @@ def train(
 
         logging.info(
             f"Epoch {epoch+1}: Train loss: {train_loss:.4f}, Val loss: {val_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}"
+        )
+
+        train_cm = confusion_matrix(val_all_labels, val_all_preds)
+        val_cm = confusion_matrix(val_all_labels, val_all_preds)
+        writer.add_figure(
+            "Confusion Matrix (train)",
+            get_confusion_matrix_figure(train_cm),
+            epoch + 1,
+        )
+        writer.add_figure(
+            "Confusion Matrix (val)",
+            get_confusion_matrix_figure(val_cm),
+            epoch + 1,
         )
 
         writer.add_scalars(
@@ -141,6 +164,17 @@ def train(
             torch.save(model, MODEL_DIR_PATH / f"final_{epoch}.pt")
 
     return real_num_epoch
+
+
+def get_confusion_matrix_figure(cm):
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.heatmap(
+        cm, annot=True, fmt="d", cmap="Blues", xticklabels=False, yticklabels=False
+    )
+    ax.set_xlabel("Predicted Labels")
+    ax.set_ylabel("True Labels")
+    ax.set_title("Confusion Matrix")
+    return fig
 
 
 @click.command()
